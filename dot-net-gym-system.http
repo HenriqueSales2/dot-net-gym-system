@@ -1,0 +1,6 @@
+@dot_net_gym_system_HostAddress = http://localhost:5133
+
+GET {{dot_net_gym_system_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
