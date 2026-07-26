@@ -1,53 +1,66 @@
-﻿using Scalar.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 public class Program
 {
-public static void Main(string[] args)
-{
-var builder = WebApplication.CreateBuilder(args);
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddDbContext<GymSystemDb> (opt => opt.UseInMemoryDatabase("GymSystemList"));
+        builder.Services.AddOpenApi();
+        var app = builder.Build();
 
-builder.Services.AddOpenApi();
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+        }
 
-var app = builder.Build();
+        app.MapGet("/person", async (GymSystemDb db) => 
+            await db.People.ToListAsync());
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+        app.MapGet("/person/{id}", async (long id, GymSystemDb db) =>
+            await db.People.FindAsync(id)
+            is Person person
+                ? Results.Ok(person)
+                : Results.NotFound());    
 
-app.UseHttpsRedirection();
+        app.MapPost("/person", async (Person person, GymSystemDb db) =>
+        {
+            db.People.Add(person);
+            await db.SaveChangesAsync();
 
+            return Results.Created($"/person/{person.Id}", person);
+        });
 
-// remove this later //
+        app.MapPut("/person/{id}", async (long id, Person newPerson, GymSystemDb db) =>
+        {
+            var person = await db.People.FindAsync(id);
 
-var summaries = new[] 
-{
-"Freezing", "Brancing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+            if (person is null) return Results.NotFound();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index => 
-        new WeatherForecast
-        (
-        DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-        Random.Shared.Next(-20, 55),
-        summaries[Random.Shared.Next(summaries.Length)]
-        ))
-    .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+            person.FirstName = newPerson.FirstName;
+            person.LastName = newPerson.LastName;
+            person.Address = newPerson.Address;
+            person.Gender = newPerson.Gender;
+            person.Secret = newPerson.Secret;
 
+            await db.SaveChangesAsync();
 
-app.Run();
+            return Results.NoContent();
+        });
+
+        app.MapDelete("/person/{id}", async (long id, GymSystemDb db) =>
+        {
+            if (await db.People.FindAsync(id) is Person person)
+            {
+                db.People.Remove(person);
+                await db.SaveChangesAsync();
+                return Results.NoContent();
+            }
+            return Results.NotFound();
+        });
+
+        app.Run();
     }
 }
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-
-// remove this later //
