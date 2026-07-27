@@ -44,6 +44,22 @@ public class Program
             person.Address = newPerson.Address;
             person.Gender = newPerson.Gender;
             person.Secret = newPerson.Secret;
+            person.IsEnabled = newPerson.IsEnabled;
+
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        });
+
+        app.MapPatch("/person/{id}", async (long id, PersonPatchDTO patch, GymSystemDb db) =>
+        {
+            var person = await db.People.FindAsync(id);
+
+            if (person is null) return Results.NotFound();
+
+            if (patch.FirstName is not null) person.FirstName = patch.FirstName;
+            if (patch.LastName is not null) person.LastName = patch.LastName;
+            if (patch.IsEnabled is not null) person.IsEnabled = patch.IsEnabled.Value;
 
             await db.SaveChangesAsync();
 
