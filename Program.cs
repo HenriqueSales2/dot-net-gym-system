@@ -18,66 +18,89 @@ public class Program
 
         var endpointPerson = app.MapGroup("/person");
 
-        app.MapGet("/", async (GymSystemDb db) => 
-            await db.People.ToListAsync());
+        endpointPerson.MapGet("/", FindAll);
+        endpointPerson.MapGet("/{id}", FindById);
+        endpointPerson.MapPost("/", Create);
+        endpointPerson.MapPut("/{id}", Update);
+        endpointPerson.MapPatch("/{id}", Patch);
+        endpointPerson.MapDelete("/{id}", Delete);
 
-        app.MapGet("/{id}", async (long id, GymSystemDb db) =>
-            await db.People.FindAsync(id)
-            is Person person
-                ? Results.Ok(person)
-                : Results.NotFound());
-
-        app.MapPost("/", async (Person person, GymSystemDb db) =>
-        {
-            db.People.Add(person);
-            await db.SaveChangesAsync();
-
-            return Results.Created($"/person/{person.Id}", person);
-        });
-
-        app.MapPut("/{id}", async (long id, Person newPerson, GymSystemDb db) =>
-        {
-            var person = await db.People.FindAsync(id);
-
-            if (person is null) return Results.NotFound();
-
-            person.FirstName = newPerson.FirstName;
-            person.LastName = newPerson.LastName;
-            person.Address = newPerson.Address;
-            person.Gender = newPerson.Gender;
-            person.Secret = newPerson.Secret;
-            person.IsEnabled = newPerson.IsEnabled;
-
-            await db.SaveChangesAsync();
-
-            return Results.NoContent();
-        });
-
-        app.MapPatch("/{id}", async (long id, PersonPatchDTO patch, GymSystemDb db) =>
-        {
-            var person = await db.People.FindAsync(id);
-
-            if (person is null) return Results.NotFound();
-
-            if (patch.FirstName is not null) person.FirstName = patch.FirstName;
-            if (patch.LastName is not null) person.LastName = patch.LastName;
-            if (patch.IsEnabled is not null) person.IsEnabled = patch.IsEnabled.Value;
-
-            await db.SaveChangesAsync();
-
-            return Results.NoContent();
-        });
-
-        app.MapDelete("/{id}", async (long id, GymSystemDb db) =>
-        {
-            if (await db.People.FindAsync(id) is Person person)
-            {
-                db.People.Remove(person);
-                await db.SaveChangesAsync();
-                return Results.NoContent();
-            }
-            return Results.NotFound();
-        });
         app.Run();
+    }
+
+    private static async Task<IResult> FindAll(GymSystemDb db)
+    {
+        return TypedResults.Ok(await db.People.Select(x => new PersonDTO(x)).ToArrayAsync());
+    }
+
+    private static async Task<IResult> FindById(long id, GymSystemDb db)
+    {
+        return await db.People.FindAsync(id)
+            is Person person
+                ? TypedResults.Ok(new PersonDTO(person))
+                : TypedResults.NotFound();
+    }
+
+    private static async Task<IResult> Create(PersonDTO personDTO, GymSystemDb db)
+    {
+        var person = new Person
+        {
+            FirstName = personDTO.FirstName,
+            LastName = personDTO.LastName,
+            Address = personDTO.Address,
+            Gender = personDTO.Gender,
+            Secret = personDTO.Secret,
+            IsEnabled = personDTO.IsEnabled
+        };
+
+        db.People.Add(person);
+        await db.SaveChangesAsync();
+
+        personDTO = new PersonDTO(person);
+
+        return TypedResults.Created($"/person/{personDTO.Id}", personDTO);
+    }
+
+    private static async Task<IResult> Update(long id, PersonDTO newPersonDTO, GymSystemDb db)
+    {
+        var person = await db.People.FindAsync(id);
+
+        if (person is null) return TypedResults.NotFound();
+
+        person.FirstName = newPersonDTO.FirstName;
+        person.LastName = newPersonDTO.LastName;
+        person.Address = newPersonDTO.Address;
+        person.Gender = newPersonDTO.Gender;
+        person.Secret = newPersonDTO.Secret;
+        person.IsEnabled = newPersonDTO.IsEnabled;
+
+        await db.SaveChangesAsync();
+
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> Patch(long id, PersonPatchDTO patchDTO, GymSystemDb db)
+    {
+        var person = await db.People.FindAsync(id);
+
+        if (person is null) return TypedResults.NotFound();
+
+        if (patchDTO.FirstName is not null) person.FirstName = patchDTO.FirstName;
+        if (patchDTO.LastName is not null) person.LastName = patchDTO.LastName;
+
+        await db.SaveChangesAsync();
+
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<IResult> Delete(long id, GymSystemDb db)
+    {
+        if (await db.People.FindAsync(id) is Person person)
+        {
+            db.People.Remove(person);
+            await db.SaveChangesAsync();
+            return TypedResults.NoContent();
+        }
+        return TypedResults.NotFound();
     }
 }
