@@ -16,16 +16,18 @@ public class Program
             app.MapScalarApiReference();
         }
 
-        app.MapGet("/person", async (GymSystemDb db) => 
+        var endpointPerson = app.MapGroup("/person");
+
+        app.MapGet("/", async (GymSystemDb db) => 
             await db.People.ToListAsync());
 
-        app.MapGet("/person/{id}", async (long id, GymSystemDb db) =>
+        app.MapGet("/{id}", async (long id, GymSystemDb db) =>
             await db.People.FindAsync(id)
             is Person person
                 ? Results.Ok(person)
-                : Results.NotFound());    
+                : Results.NotFound());
 
-        app.MapPost("/person", async (Person person, GymSystemDb db) =>
+        app.MapPost("/", async (Person person, GymSystemDb db) =>
         {
             db.People.Add(person);
             await db.SaveChangesAsync();
@@ -33,7 +35,7 @@ public class Program
             return Results.Created($"/person/{person.Id}", person);
         });
 
-        app.MapPut("/person/{id}", async (long id, Person newPerson, GymSystemDb db) =>
+        app.MapPut("/{id}", async (long id, Person newPerson, GymSystemDb db) =>
         {
             var person = await db.People.FindAsync(id);
 
@@ -51,7 +53,7 @@ public class Program
             return Results.NoContent();
         });
 
-        app.MapPatch("/person/{id}", async (long id, PersonPatchDTO patch, GymSystemDb db) =>
+        app.MapPatch("/{id}", async (long id, PersonPatchDTO patch, GymSystemDb db) =>
         {
             var person = await db.People.FindAsync(id);
 
@@ -66,7 +68,7 @@ public class Program
             return Results.NoContent();
         });
 
-        app.MapDelete("/person/{id}", async (long id, GymSystemDb db) =>
+        app.MapDelete("/{id}", async (long id, GymSystemDb db) =>
         {
             if (await db.People.FindAsync(id) is Person person)
             {
@@ -76,7 +78,6 @@ public class Program
             }
             return Results.NotFound();
         });
-
         app.Run();
     }
 }
