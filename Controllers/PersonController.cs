@@ -13,25 +13,24 @@ public class PersonController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PersonDTO>> FindAll()
+    public async Task<ActionResult<IEnumerable<PersonDTO>>> FindAll()
     {
-        var user = await _service.FindAllAsync();
+        var people = await _service.FindAllAsync();
 
-        return Ok(user);
+        return Ok(people);
     } 
 
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PersonDTO>> FindById(long id)
     {
-        var user = await _service.FindById(id);
-        
-        return Ok(user);
+        var person = await _service.FindByIdAsync(id);
+
+        return person is not null
+            ? Ok(new PersonDTO(person))
+            : NotFound();
     } 
-
-
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -41,5 +40,47 @@ public class PersonController : ControllerBase
         var user = await _service.CreateAsync(personDTO);
 
         return Created($"/person/{user.Id}",user);
+    }
+
+    [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> Update(long id, PersonDTO personDTO)
+    {
+        var isUpdate = await _service.UpdateAsync(id, personDTO);
+
+        if (!isUpdate)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
+    [HttpPatch("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> Patch(long id, PersonPatchDTO patchDTO)
+    {
+        var isPatch = await _service.PatchAsync(id, patchDTO);
+
+        if (!isPatch)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    } 
+
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> Delete(long id)
+    {
+        var isDeleted = await _service.DeleteAsync(id);
+
+        if (!isDeleted)
+        {
+            return NotFound();
+        }
+        return NoContent();
     } 
 }

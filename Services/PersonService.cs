@@ -9,17 +9,14 @@ public class PersonService : IPersonService
         _db = db;
     }
 
-    public async Task<IResult> FindAllAsync()
+    public async Task<IEnumerable<PersonDTO>> FindAllAsync()
     {
-        return TypedResults.Ok(await _db.People.Select(x => new PersonDTO(x)).ToArrayAsync());
+        return await _db.People.Select(x => new PersonDTO(x)).ToArrayAsync();
     }
 
-    public async Task<IResult> FindById(long id)
+    public async Task<Person?> FindByIdAsync(long id)
     {
-        return await _db.People.FindAsync(id)
-            is Person person
-                ? TypedResults.Ok(new PersonDTO(person))
-                : TypedResults.NotFound();
+        return await _db.People.FindAsync(id);
     }
 
     public async Task<PersonDTO> CreateAsync(PersonDTO personDTO)
@@ -39,4 +36,50 @@ public class PersonService : IPersonService
 
         return new PersonDTO(person);
     }
-}
+
+     public async Task<bool> UpdateAsync(long id, PersonDTO newPersonDTO)
+    {
+        var person = await _db.People.FindAsync(id);
+
+        if (person is null || newPersonDTO is null) return false;
+
+        person.FirstName = newPersonDTO.FirstName;
+        person.LastName = newPersonDTO.LastName;
+        person.Address = newPersonDTO.Address;
+        person.Gender = newPersonDTO.Gender;
+        person.Secret = newPersonDTO.Secret;
+        person.IsEnabled = newPersonDTO.IsEnabled;
+
+        await _db.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> PatchAsync(long id, PersonPatchDTO patchDTO)
+    {
+        var person = await _db.People.FindAsync(id);
+
+        if (person is null || patchDTO is null) return false;
+
+        if (patchDTO.FirstName is not null) person.FirstName = patchDTO.FirstName;
+        if (patchDTO.LastName is not null) person.LastName = patchDTO.LastName;
+        if (patchDTO.IsEnabled is not null) person.IsEnabled = patchDTO.IsEnabled;
+
+        await _db.SaveChangesAsync();
+
+        return true;
+    }
+
+     public async Task<bool> DeleteAsync(long id)
+    {
+        var person = await _db.People.FindAsync(id);
+        
+        if (person == null)
+        {
+            return false;
+        }
+            _db.People.Remove(person);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+    }
