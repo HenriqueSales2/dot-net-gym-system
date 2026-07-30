@@ -1,14 +1,30 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
+using Microsoft.EntityFrameworkCore;
+
+[assembly : ApiController]
 
 public class Program
 {
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Services.AddDbContext<GymSystemDb> (opt => opt.UseInMemoryDatabase("GymSystemList"));
+
+        builder.Services.AddDbContext<GymSystemDb>(options =>
+        options.UseInMemoryDatabase("GymSystemDb"));        
+
+        builder.Services.AddScoped<IPersonService, PersonService>();
+        builder.Services.AddControllers();
         builder.Services.AddOpenApi();
+
+        
+
         var app = builder.Build();
+
+        app.UseHttpsRedirection();
+        app.UseAuthorization();
+        app.MapControllers();
+        
 
         if (app.Environment.IsDevelopment())
         {
@@ -16,31 +32,12 @@ public class Program
             app.MapScalarApiReference();
         }
 
-        var endpointPerson = app.MapGroup("/person");
-
-        endpointPerson.MapGet("/", FindAll);
-        endpointPerson.MapGet("/{id}", FindById);
-        endpointPerson.MapPost("/", Create);
-        endpointPerson.MapPut("/{id}", Update);
-        endpointPerson.MapPatch("/{id}", Patch);
-        endpointPerson.MapDelete("/{id}", Delete);
-
         app.Run();
     }
+}
+    /*
 
-    private static async Task<IResult> FindAll(GymSystemDb db)
-    {
-        return TypedResults.Ok(await db.People.Select(x => new PersonDTO(x)).ToArrayAsync());
-    }
-
-    private static async Task<IResult> FindById(long id, GymSystemDb db)
-    {
-        return await db.People.FindAsync(id)
-            is Person person
-                ? TypedResults.Ok(new PersonDTO(person))
-                : TypedResults.NotFound();
-    }
-
+/*
     private static async Task<IResult> Create(PersonDTO personDTO, GymSystemDb db)
     {
         var person = new Person
@@ -60,6 +57,7 @@ public class Program
 
         return TypedResults.Created($"/person/{personDTO.Id}", personDTO);
     }
+    
 
     private static async Task<IResult> Update(long id, PersonDTO newPersonDTO, GymSystemDb db)
     {
@@ -103,4 +101,4 @@ public class Program
         }
         return TypedResults.NotFound();
     }
-}
+    */
